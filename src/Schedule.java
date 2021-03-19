@@ -1,6 +1,7 @@
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.Random;
+import java.util.LinkedList;
+import java.util.List;
 
 class SortByStartingTime implements Comparator<ScheduleEvent> {
     @Override
@@ -11,22 +12,37 @@ class SortByStartingTime implements Comparator<ScheduleEvent> {
 
 public class Schedule {
     public final Data endOfSchedule = new Data(30, new Time(0));
+    public final Time minEventDelay = new Time(10);
+    public final Time meanEventDelay = new Time(20);
+    public final Time maxEventDelay = new Time(60);
     private final int nEvents;
     private final ScheduleEvent[] schedule;
-    private final Random random;
+    private List<String> shipNames;
 
     public Schedule() {
-        random = new Random();
-        nEvents = genRandomInt(50, 100);
-        schedule = new ScheduleEvent[nEvents];
-        for (int i = 0; i < nEvents; i++) {
-            schedule[i] = new ScheduleEvent(genRandomShip(), genRandomData());
+        shipNames = readNames();
+        List<ScheduleEvent> list = new LinkedList<>();
+        Data[] soonestNewStarts = new Data[CargoType.values().length];
+        for (int i = 0; i < CargoType.values().length; i++) {
+            soonestNewStarts[i] = new Data(0);
         }
+        int tryesBeforeBreak = 10;
+        while (tryesBeforeBreak > 0) {
+            Ship ship = genRandomShip();
+            ScheduleEvent event = new ScheduleEvent(ship, genRandomData(soonestNewStarts[ship.getCargoType().ordinal()]));
+            if (event.getEndingData().getDay() <= endOfSchedule.getDay()) {
+                list.add(event);
+                soonestNewStarts[ship.getCargoType().ordinal()] = new Data(event.getEndingData().toMinutes() + minEventDelay.toMinutes());
+            } else {
+                tryesBeforeBreak--;
+            }
+        }
+        nEvents = list.size();
+        schedule = list.toArray(new ScheduleEvent[nEvents]);
         Arrays.sort(schedule, new SortByStartingTime());
     }
 
     public Schedule(ScheduleEvent[] events) {
-        random = new Random();
         nEvents = events.length;
         schedule = new ScheduleEvent[nEvents];
         for (int i = 0; i < nEvents; i++) {
@@ -58,70 +74,51 @@ public class Schedule {
         return schedule[n];
     }
 
-    private int genRandomInt(int start, int end) {
-        return start + random.nextInt(end - start + 1);
+    private Data genRandomData(Data minData) {
+        return new Data(Rand.genNormalInt(minData.toMinutes() + meanEventDelay.toMinutes(),
+                minData.toMinutes(),
+                Math.min(endOfSchedule.getDay() * 24 * 60 - 1, minData.toMinutes() + maxEventDelay.toMinutes())));
     }
 
-    private Data genRandomData() {
-        return new Data(random.nextInt(endOfSchedule.getDay() * 24 * 60));
+    private List<String> readNames() {
+        //from https://en.wikipedia.org/wiki/List_of_fictional_ships, length - 127
+        List<String> names = new LinkedList<>();
+        for (String name : JSONService.loadShipNames()) {
+            names.add(name);
+        }
+        return names;
     }
 
     private Ship genRandomShip() {
-        String[] names = {
-                "Alexandria", "Argonaut", "Aurora", "Altair", "Arcadia", "Alice May", "Astrea", "Antaeus", "Alicorn",
-                "Bebop", "Borneo Prince", "Barracuda", "Black Hawk", "Brandenburg", "Baalbek", "Brave Joffrey",
-                "Chancellor", "Cithara", "Cassidy", "Chelsea", "Covenant", "Compass Rose", "Calypso", "Cantwell",
-                "Decolore", "Defiant", "Dragonfish", "Dazzler", "Duncan",
-                "Eagle's Shadow", "Elizabeth Dane", "Empress", "Endeavour", "Essess", "Erebus",
-                "Fenton", "Fin of God", "Franklin",
-                "Gran Tesoro", "Grossadler", "Genesis", "Ghost", "Goliath",
-                "Hawksub", "Hahnchen Maru", "Hesperus",
-                "Illustria", "Inferno", "Interceptor", "Indra", "Ilya Podogin", "Independence",
-                "Jenny", "Jolly Roger",
-                "Karaboudjan", "Korund",
-                "Love Nest", "Liparus", "Laughing Sandbag", "Leviathan", "Liberian Star",
-                "Mermaid", "Mirai", "Moby Dick", "Morning Star", "Montana", "Marie Celeste", "Milka", "Mortzestus",
-                "Naked Sun", "Nautilus", "Neptune", "Nemesis", "Numestra del Oro",
-                "Odessa", "Orca", "Okinawa", "Onward",
-                "Pascal Magi", "Poseidon", "Princess Irene", "Proteus", "Penguin", "Pocahontas", "Pushkin", "Pandora",
-                "Queen Anne's Revenge",
-                "Reaper", "Red October", "Red Witch", "Roland", "Rocketing Spitfire",
-                "Spiral", "St. Aphrodite", "Sirius", "Sherwood", "Saturn", "Skyline", "Sutherland", "Scorpion", "Siren",
-                "Twelve Apostles", "Thunderer", "Titanic", "Tristram", "Thomas Jefferson", "Trident", "Tempest",
-                "Unicorn", "Utah", "Undine", "Unnamed",
-                "Vulkan", "Valhalla", "Vengeance", "Venus", "Vortex",
-                "White Castle", "Wolfgang", "Warhammer", "Witch of Endor", "Wasp",
-                "X-2",
-                "Yashiromaru", "Yellow Submarine",
-                "Zuko's Fire Nation ship", "Zelbess"
-        };//from https://en.wikipedia.org/wiki/List_of_fictional_ships, length - 127
+        final String codeMembers = "1234567890QWERTYUIOPASDFGHJKLZXCVBNM";
+        final int chanceOfCode = 5;
         String name;
-        while (true) {
-            name = names[random.nextInt(names.length)];
-            boolean unique_name = true;
-            for (ScheduleEvent event : schedule) {
-                if (event == null) continue;
-                if (event.getInvolvedShip().getName().equals(name)) {
-                    unique_name = false;
-                    break;
-                }
-            }
-            if (unique_name) break;
+        if ((shipNames.size() == 0) || (Rand.genInt(100) < chanceOfCode)) {
+            StringBuilder string = new StringBuilder();
+            for (int i = 0; i < 2; i++)
+                string.append(codeMembers.charAt(Rand.genInt(10, codeMembers.length() - 1)));
+            string.append('-');
+            for (int i = 0; i < 4; i++) string.append(codeMembers.charAt(Rand.genInt(10)));
+            name = string.toString();
+        } else {
+            int index = Rand.genInt(shipNames.size());
+            name = shipNames.get(index);
+            shipNames.remove(index);
         }
-        CargoType cargoType = CargoType.values()[random.nextInt(CargoType.values().length)];
+        CargoType cargoType = CargoType.values()[Rand.genInt(CargoType.values().length)];
         int cargoAmount;
-        if (cargoType != CargoType.CONTAINERS) cargoAmount = genRandomInt(100, 7000);
-        else cargoAmount = genRandomInt(10, 300);
+        if (cargoType != CargoType.CONTAINERS) cargoAmount = Rand.genInt(100, 7000);
+        else cargoAmount = Rand.genInt(10, 300);
         return new Ship(name, cargoType, cargoAmount);
     }
 
     public static void main(String[] args) {
         Schedule schedule = new Schedule();
-        System.out.println(schedule);
-        ScheduleJSONService.saveSchedule(schedule);
-        System.out.println("Saved");
-        schedule = ScheduleJSONService.loadSchedule();
-        System.out.println("Loaded");
-        System.out.println(schedule);
+        JSONService.saveSchedule(schedule);
+        SeaPortSimulator seaPortSimulator = new SeaPortSimulator(JSONService.loadSchedule());
+        System.out.print("Original ");
+        seaPortSimulator.printOriginalSchedule();
+        System.out.print("Actualized ");
+        seaPortSimulator.printActualSchedule();
     }
 }

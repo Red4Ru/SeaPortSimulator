@@ -6,8 +6,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 
-public class ScheduleJSONService {
-    private static final String fileName = System.getProperty("user.dir") + "/schedule.json";
+public class JSONService {
+    private static final String scheduleFileName = System.getProperty("user.dir") + "/schedule.json";
+    private static final String shipNamesFileName = System.getProperty("user.dir") + "/ship_names.json";
 
     public static void addScheduleEvents(ScheduleEvent[] events) {
         Schedule schedule = loadSchedule();
@@ -27,7 +28,7 @@ public class ScheduleJSONService {
 
     public static Schedule loadSchedule() {
         try {
-            JSONObject jsonObject = (JSONObject) new JSONParser().parse(new FileReader(fileName));
+            JSONObject jsonObject = (JSONObject) new JSONParser().parse(new FileReader(scheduleFileName));
             return JSONConverter.scheduleFromJSON(jsonObject);
         } catch (Exception e) {
             e.printStackTrace();
@@ -37,7 +38,7 @@ public class ScheduleJSONService {
 
     public static void saveSchedule(Schedule schedule) {
         try {
-            FileWriter file = new FileWriter(fileName);
+            FileWriter file = new FileWriter(scheduleFileName);
             file.write(JSONConverter.toJSON(schedule).toJSONString());
             file.close();
         } catch (IOException e) {
@@ -45,4 +46,13 @@ public class ScheduleJSONService {
         }
     }
 
+    public static String[] loadShipNames() {
+        try {
+            JSONObject jsonObject = (JSONObject) new JSONParser().parse(new FileReader(shipNamesFileName));
+            return JSONConverter.shipNamesFromJSON(jsonObject);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return new String[]{};
+    }
 }

@@ -97,4 +97,14 @@ public class JSONConverter {
         return new Time(intFromJSON(jsonObject, "hours"),
                 intFromJSON(jsonObject, "minutes"));
     }
+
+    public static String[] shipNamesFromJSON(JSONObject jsonObject) {
+        JSONArray arr = (JSONArray) jsonObject.get("shipNames");
+        int nNames = arr.size();
+        String[] names = new String[nNames];
+        for (int i = 0; i < nNames; i++) {
+            names[i] = (String) arr.get(i);
+        }
+        return names;
+    }
 }
