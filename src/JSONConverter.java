@@ -27,15 +27,12 @@ public class JSONConverter {
         JSONObject out = new JSONObject();
         out.put("ship", toJSON(event.getInvolvedShip()));
         out.put("startingData", toJSON(event.getStartingData()));
-        out.put("unloadingTime", toJSON(event.getUnloadingTime()));
         return out;
     }
 
     private static ScheduleEvent scheduleEventFromJSONArray(JSONArray array, int i) {
         JSONObject jsonObject = (JSONObject) array.get(i);
-        return new ScheduleEvent(shipFromJSON(jsonObject), dataFromJSON(jsonObject, "startingData"),
-                timeFromJSON(jsonObject, "unloadingTime")
-        );
+        return new ScheduleEvent(shipFromJSON(jsonObject), dataFromJSON(jsonObject, "startingData"));
     }
 
     private static JSONObject toJSON(Ship ship) {

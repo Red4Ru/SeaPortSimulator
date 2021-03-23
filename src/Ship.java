@@ -1,12 +1,16 @@
 public class Ship {
     private final String name;
     private final CargoType cargoType;
-    private final int cargoAmount;
+    private int cargoAmount;
 
     public Ship(String name, CargoType cargoType, int cargoAmount) {
         this.name = name;
         this.cargoType = cargoType;
         this.cargoAmount = cargoAmount;
+    }
+
+    public Ship(Ship other){
+        this(other.name,other.cargoType, other.cargoAmount);
     }
 
     @Override
@@ -32,5 +36,13 @@ public class Ship {
 
     public int getCargoAmount() {
         return cargoAmount;
+    }
+    public void setCargoAmount(int cargoAmount) {
+        this.cargoAmount = cargoAmount;
+    }
+
+    public Time getUnloadingTime() {
+        return new Time((getCargoAmount() + getCargoType().getAmount() - 1) /
+                getCargoType().getAmount() * getCargoType().getPeriod().toMinutes());
     }
 }

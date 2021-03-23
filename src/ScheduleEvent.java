@@ -1,18 +1,10 @@
 public class ScheduleEvent {
-    private Ship ship;
-    private Data startingData;
-    private Time unloadingTime;
+    private final Ship ship;
+    private final Data startingData;
 
-    public ScheduleEvent(Ship ship, Data data) {
-        this.startingData = data;
-        this.unloadingTime = new Time((int) (ship.getCargoAmount() / ship.getCargoType().getUnloadingSpeed()));
+    public ScheduleEvent(Ship ship, Data startingData) {
         this.ship = ship;
-    }
-
-    public ScheduleEvent(Ship ship, Data startingData, Time unloadingTime) {
         this.startingData = startingData;
-        this.unloadingTime = unloadingTime;
-        this.ship = ship;
     }
 
     @Override
@@ -27,27 +19,15 @@ public class ScheduleEvent {
         return ship;
     }
 
-    public void setInvolvedShip(Ship ship) {
-        this.ship = ship;
-    }
-
     public Data getStartingData() {
         return startingData;
     }
 
-    public void setStartingData(Data data) {
-        this.startingData = data;
-    }
-
     public Time getUnloadingTime() {
-        return unloadingTime;
-    }
-
-    public void setUnloadingTime(Time time) {
-        this.unloadingTime = time;
+        return ship.getUnloadingTime();
     }
 
     public Data getEndingData() {
-        return new Data(startingData.toMinutes() + unloadingTime.toMinutes());
+        return new Data(getStartingData().toMinutes() + getUnloadingTime().toMinutes());
     }
 }

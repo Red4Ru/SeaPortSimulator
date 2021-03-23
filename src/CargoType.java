@@ -1,15 +1,21 @@
 public enum CargoType {
-    LOOSE(75.0), // ton of loose cargo per minute
-    LIQUID(15.0), // ton of liquid cargo per minute
-    CONTAINERS(1.0 / 6); // containers per hour
+    LOOSE(new Time(0,2), 150), // amount in tons of loose cargo per unload
+    LIQUID(new Time(0,1), 15), // amount in tons of liquid cargo per unload
+    CONTAINERS(new Time(0,6), 1); // amount in containers per unload
 
-    private final double unloadingSpeed;
+    private final Time period;
+    private final int amount;
 
-    CargoType(double unloadingSpeed) {
-        this.unloadingSpeed = unloadingSpeed;
+    CargoType(Time period, int amount) {
+        this.period = period;
+        this.amount = amount;
     }
 
-    public double getUnloadingSpeed() {
-        return unloadingSpeed;
+    public int getAmount() {
+        return amount;
+    }
+
+    public Time getPeriod() {
+        return period;
     }
 }

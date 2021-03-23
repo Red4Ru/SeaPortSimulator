@@ -2,6 +2,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Collections;
 
 class SortByStartingTime implements Comparator<ScheduleEvent> {
     @Override
@@ -11,10 +12,10 @@ class SortByStartingTime implements Comparator<ScheduleEvent> {
 }
 
 public class Schedule {
-    public final Data endOfSchedule = new Data(30, new Time(0));
-    public final Time minEventDelay = new Time(10);
-    public final Time meanEventDelay = new Time(20);
-    public final Time maxEventDelay = new Time(60);
+    public static final Data endOfSchedule = new Data(30, new Time(23, 59));
+    private static final Time minEventDelay = new Time(10);
+    private static final Time meanEventDelay = new Time(20);
+    private static final Time maxEventDelay = new Time(60);
     private final int nEvents;
     private final ScheduleEvent[] schedule;
     private List<String> shipNames;
@@ -74,18 +75,16 @@ public class Schedule {
         return schedule[n];
     }
 
-    private Data genRandomData(Data minData) {
+    private static Data genRandomData(Data minData) {
         return new Data(Rand.genNormalInt(minData.toMinutes() + meanEventDelay.toMinutes(),
                 minData.toMinutes(),
-                Math.min(endOfSchedule.getDay() * 24 * 60 - 1, minData.toMinutes() + maxEventDelay.toMinutes())));
+                Math.min(endOfSchedule.toMinutes(), minData.toMinutes() + maxEventDelay.toMinutes())));
     }
 
-    private List<String> readNames() {
+    private static List<String> readNames() {
         //from https://en.wikipedia.org/wiki/List_of_fictional_ships, length - 127
         List<String> names = new LinkedList<>();
-        for (String name : JSONService.loadShipNames()) {
-            names.add(name);
-        }
+        Collections.addAll(names, JSONService.loadShipNames());
         return names;
     }
 
@@ -115,10 +114,5 @@ public class Schedule {
     public static void main(String[] args) {
         Schedule schedule = new Schedule();
         JSONService.saveSchedule(schedule);
-        SeaPortSimulator seaPortSimulator = new SeaPortSimulator(JSONService.loadSchedule());
-        System.out.print("Original ");
-        seaPortSimulator.printOriginalSchedule();
-        System.out.print("Actualized ");
-        seaPortSimulator.printActualSchedule();
     }
 }
