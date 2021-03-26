@@ -14,7 +14,9 @@ class SortByEndingTime implements Comparator<Unload> {
 
 public class Unloader implements Runnable {
     public static final int MAX_SAME_TIME = 2;
-    private static final PriorityQueue<Unload> availableUnloads = new PriorityQueue<>(new SortByEndingTime());
+    private static final PriorityQueue<Unload>[] availableUnloads = new PriorityQueue[CargoType.values().length];
+    private static final Object[] mutexes = new Object[CargoType.values().length];
+    private static final Object totalDelayMutex = new Object();
     private static final AtomicBoolean running = new AtomicBoolean(true);
     private static final AtomicInteger nWaiting = new AtomicInteger(0);
     private static final AtomicInteger nUnloadsTotal = new AtomicInteger(0);
@@ -28,15 +30,18 @@ public class Unloader implements Runnable {
 
     public static synchronized void addAvailableUnload(Unload unload) {
 //            System.out.println("before+: " + availableUnloadsSynch.size());
-        availableUnloads.add(unload);
+        availableUnloads[unload.getCargoType().ordinal()].add(unload);
 //            System.out.println("+1:  now " + availableUnloadsSynch.size());
     }
 
     public static synchronized void printAvailableUnload() {
         int i = 0;
-        for (Unload unload : availableUnloads) {
-            i++;
-            System.out.printf("%d) %s%n", i, unload.toString());
+        for (CargoType cargoType : CargoType.values()) {
+            System.out.printf("%s:\n", cargoType);
+            for (Unload unload : availableUnloads[cargoType.ordinal()]) {
+                i++;
+                System.out.printf("%d) %s%n", i, unload.toString());
+            }
         }
         System.out.println();
     }
@@ -44,14 +49,18 @@ public class Unloader implements Runnable {
     public static synchronized void setCurrentData(Data currentData) {
         nWaiting.set(0);
         Unloader.currentData = currentData;
-        for (Unload unload : availableUnloads) {
-            unload.setCurrentData(Unloader.currentData);
+        for (CargoType cargoType : CargoType.values()) {
+            for (Unload unload : availableUnloads[cargoType.ordinal()]) {
+                unload.setCurrentData(Unloader.currentData);
+            }
         }
         Unloader.class.notifyAll();
     }
 
     public static synchronized int getPenalty(int pennyPerHour) {
-        return pennyPerHour * totalDelay.getHours();
+        synchronized (totalDelayMutex) {
+            return pennyPerHour * totalDelay.getHours();
+        }
     }
 
     public static synchronized void reset(long delay) {
@@ -64,13 +73,22 @@ public class Unloader implements Runnable {
         }
         running.set(true);
         currentData = new Data(-1);
-        totalDelay = new Time(0);
-        availableUnloads.clear();
+        synchronized (totalDelayMutex) {
+            totalDelay = new Time(0);
+        }
+        for (CargoType cargoType : CargoType.values()) {
+            availableUnloads[cargoType.ordinal()] = new PriorityQueue<>(new SortByEndingTime());
+            mutexes[cargoType.ordinal()] = new Object();
+        }
         nWaiting.set(0);
     }
 
     public static int getAvailableUnloadsLen() {
-        return availableUnloads.size();
+        int sum = 0;
+        for (CargoType cargoType : CargoType.values()) {
+            sum += availableUnloads[cargoType.ordinal()].size();
+        }
+        return sum;
     }
 
     public static int getNumberWaiting() {
@@ -97,31 +115,33 @@ public class Unloader implements Runnable {
                     }
                 }
                 if (!running.get()) break;
-//                System.out.printf("Enter thread %s\n", Thread.currentThread());
                 lastCheckedMinutes = currentData.toMinutes();
-                if ((endOfTask != null) && (currentData.toMinutes() == endOfTask.toMinutes())) {
-                    endOfTask = null;
-                }
-                if (endOfTask == null) {
-                    while (!availableUnloads.isEmpty()) {
-                        Unload unload = availableUnloads.poll();
+            }
+            if ((endOfTask != null) && (lastCheckedMinutes == endOfTask.toMinutes())) {
+                endOfTask = null;
+            }
+            if (endOfTask == null) {
+                synchronized (mutexes[cargoType.ordinal()]) {
+                    while (!availableUnloads[cargoType.ordinal()].isEmpty()) {
+                        Unload unload = availableUnloads[cargoType.ordinal()].poll();
                         int involvedUnloaders = unload.getSimultaneousExecutesCount();
-                        if ((unload.getCargoType() == cargoType) && (involvedUnloaders < MAX_SAME_TIME)) {
+                        if (involvedUnloaders < MAX_SAME_TIME) {
                             endOfTask = unload.execute();
                             if (unload.getRemainingTime().toMinutes() == 0) {
-                                totalDelay = new Time((unload.getExcess().getHours() + totalDelay.getHours()) * 60);
-//                                System.out.println(totalDelay);
-//                                    System.out.println("-1");
+                                synchronized (totalDelayMutex) {
+                                    totalDelay = new Time((unload.getExcess().getHours() + totalDelay.getHours()) * 60);
+                                }
                                 nUnloadsTotal.incrementAndGet();
-                                break;
+                            } else {
+                                checked.add(unload);
                             }
+                            break;
                         }
                         checked.add(unload);
                     }
-                    availableUnloads.addAll(checked);
-                    checked.clear();
+                    availableUnloads[cargoType.ordinal()].addAll(checked);
                 }
-//                System.out.printf("Exit thread %s\n", Thread.currentThread());
+                checked.clear();
             }
         }
     }
