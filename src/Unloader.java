@@ -18,49 +18,34 @@ public class Unloader implements Runnable {
     private static final AtomicBoolean running = new AtomicBoolean(true);
     private static final AtomicInteger nWaiting = new AtomicInteger(0);
     private static final AtomicInteger nUnloadsTotal = new AtomicInteger(0);
-    private static Data currentData = new Data(0);
+    private static Data currentData = new Data(-1);
     private static Time totalDelay = new Time(0);
     private final CargoType cargoType;
-    private final Data endOfSimulation;
 
-    public Unloader(CargoType cargoType, Data endOfSimulation) {
+    public Unloader(CargoType cargoType) {
         this.cargoType = cargoType;
-        this.endOfSimulation = endOfSimulation;
     }
 
     public static synchronized void addAvailableUnload(Unload unload) {
-        Collection<Unload> availableUnloadsSynch = Collections.synchronizedCollection(availableUnloads);
-        synchronized (availableUnloadsSynch) {
-            System.out.println("before+: " + availableUnloadsSynch.size());
-            availableUnloadsSynch.add(unload);
-            System.out.println("+1:  now " + availableUnloadsSynch.size());
-        }
+//            System.out.println("before+: " + availableUnloadsSynch.size());
+        availableUnloads.add(unload);
+//            System.out.println("+1:  now " + availableUnloadsSynch.size());
     }
 
     public static synchronized void printAvailableUnload() {
         int i = 0;
-        Collection<Unload> availableUnloadsSynch = Collections.synchronizedCollection(availableUnloads);
-        synchronized (availableUnloadsSynch) {
-            for (Unload unloadsSynch : availableUnloadsSynch) {
-                i++;
-                System.out.printf("%d) %s%n", i, unloadsSynch.toString());
-            }
+        for (Unload unload : availableUnloads) {
+            i++;
+            System.out.printf("%d) %s%n", i, unload.toString());
         }
         System.out.println();
     }
 
-    public static synchronized void setCurrentData(Data currentData, long delay) {
+    public static synchronized void setCurrentData(Data currentData) {
+        nWaiting.set(0);
         Unloader.currentData = currentData;
-        Collection<Unload> availableUnloadsSynch = Collections.synchronizedCollection(availableUnloads);
-        synchronized (availableUnloadsSynch) {
-            for (Unload unload : availableUnloadsSynch) {
-                unload.setCurrentData(Unloader.currentData);
-            }
-        }
-        try {
-            Thread.sleep(delay);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        for (Unload unload : availableUnloads) {
+            unload.setCurrentData(Unloader.currentData);
         }
         Unloader.class.notifyAll();
     }
@@ -78,20 +63,14 @@ public class Unloader implements Runnable {
             e.printStackTrace();
         }
         running.set(true);
-        setCurrentData(new Data(0), 0);
+        currentData = new Data(-1);
         totalDelay = new Time(0);
-        Collection<Unload> availableUnloadsSynch = Collections.synchronizedCollection(availableUnloads);
-        synchronized (availableUnloadsSynch) {
-            availableUnloadsSynch.clear();
-        }
+        availableUnloads.clear();
         nWaiting.set(0);
     }
 
-    public static synchronized int getAvailableUnloadsLen() {
-        Collection<Unload> availableUnloadsSynch = Collections.synchronizedCollection(availableUnloads);
-        synchronized (availableUnloadsSynch) {
-            return availableUnloadsSynch.size();
-        }
+    public static int getAvailableUnloadsLen() {
+        return availableUnloads.size();
     }
 
     public static int getNumberWaiting() {
@@ -106,7 +85,8 @@ public class Unloader implements Runnable {
     public void run() {
         Data endOfTask = null;
         int lastCheckedMinutes = -1;
-        while ((currentData.toMinutes() < endOfSimulation.toMinutes()) && running.get()) {
+        PriorityQueue<Unload> checked = new PriorityQueue<>(new SortByEndingTime());
+        while (running.get()) {
             synchronized (Unloader.class) {
                 nWaiting.incrementAndGet();
                 while ((lastCheckedMinutes == currentData.toMinutes()) && running.get()) {
@@ -123,28 +103,23 @@ public class Unloader implements Runnable {
                     endOfTask = null;
                 }
                 if (endOfTask == null) {
-                    Collection<Unload> availableUnloadsSynch = Collections.synchronizedCollection(availableUnloads);
-                    synchronized (availableUnloadsSynch) {
-                        PriorityQueue<Unload> aus = new PriorityQueue<>(new SortByEndingTime());
-                        aus.addAll(availableUnloadsSynch);
-                        availableUnloadsSynch.clear();
-                        while (!aus.isEmpty()) {
-                            Unload unload = aus.poll();
-                            int involvedUnloaders = unload.getSimultaneousExecutesCount();
-                            if ((unload.getCargoType() == cargoType) && (involvedUnloaders < MAX_SAME_TIME)) {
-                                endOfTask = unload.execute();
-                                if (unload.getRemainingTime().toMinutes() == 0) {
-                                    totalDelay = new Time((unload.getExcess().getHours() + totalDelay.getHours()) * 60);
-                                    System.out.println(totalDelay);
-                                    System.out.println("-1");
-                                    nUnloadsTotal.incrementAndGet();
-                                    break;
-                                }
+                    while (!availableUnloads.isEmpty()) {
+                        Unload unload = availableUnloads.poll();
+                        int involvedUnloaders = unload.getSimultaneousExecutesCount();
+                        if ((unload.getCargoType() == cargoType) && (involvedUnloaders < MAX_SAME_TIME)) {
+                            endOfTask = unload.execute();
+                            if (unload.getRemainingTime().toMinutes() == 0) {
+                                totalDelay = new Time((unload.getExcess().getHours() + totalDelay.getHours()) * 60);
+//                                System.out.println(totalDelay);
+//                                    System.out.println("-1");
+                                nUnloadsTotal.incrementAndGet();
+                                break;
                             }
-                            availableUnloadsSynch.add(unload);
                         }
-                        availableUnloadsSynch.addAll(aus);
+                        checked.add(unload);
                     }
+                    availableUnloads.addAll(checked);
+                    checked.clear();
                 }
 //                System.out.printf("Exit thread %s\n", Thread.currentThread());
             }

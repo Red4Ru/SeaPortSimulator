@@ -51,67 +51,57 @@ public class SeaPortSimulator {
     public int simulate(int[] nUnloaders) {
         int nUnloadersTotal = 0;
         int totalPenalty = 0;
+        int lastDayPrinted = 0;
         final int PENNY_PER_UNLOADER = 30000;
         final int PENNY_PER_HOUR = 100;
         final int n = CargoType.values().length;
         final long RESET_DELAY = 10;
-        final long SET_TIME_DELAY = 10;
+        List<Unload> remainUnloads = new ArrayList<>(actualSchedule);
         Unloader.reset(RESET_DELAY);
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < nUnloaders[i]; j++) {
-                Thread thread = new Thread(new Unloader(CargoType.values()[i], endOfSimulation));
+                Thread thread = new Thread(new Unloader(CargoType.values()[i]));
                 thread.start();
             }
             nUnloadersTotal += nUnloaders[i];
         }
         totalPenalty += nUnloadersTotal * PENNY_PER_UNLOADER;
         Data data = new Data(0);
-        while (data.toMinutes() < endOfSimulation.toMinutes()) {
-            for (Unload unload : actualSchedule) {
+        while ((data.toMinutes() < endOfSimulation.toMinutes()) || (Unloader.getAvailableUnloadsLen() > 0)) {
+            if (data.getDay() != lastDayPrinted) {
+                lastDayPrinted = data.getDay();
+                System.out.printf("New day: %d\n", lastDayPrinted);
+            }
+            List<Unload> added = new ArrayList<>();
+            for (Unload unload : remainUnloads) {
                 if (unload.getStartingData().toMinutes() == data.toMinutes()) {
                     Unloader.addAvailableUnload(unload);
+                    added.add(unload);
                 }
             }
-            Unloader.setCurrentData(data, SET_TIME_DELAY);
-            try {
-                Thread.sleep(SET_TIME_DELAY);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+            remainUnloads.removeAll(added);
+            Unloader.setCurrentData(data);
             while (Unloader.getNumberWaiting() < nUnloadersTotal) {
             }
             data = new Data(data.toMinutes() + 1);
         }
         totalPenalty += Unloader.getPenalty(PENNY_PER_HOUR);
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
         System.out.printf("Total ships: %d\n", actualSchedule.size());
-        System.out.printf("Served ships: %d\n", Unloader.getNumberUnloads());
-        System.out.printf("Unserved ships: %d\n", Unloader.getAvailableUnloadsLen());
         Unloader.reset(RESET_DELAY);
-        System.out.println("RESET");
         return totalPenalty;
     }
 
     public static void main(String[] args) {
         int[] UL_COUNTS;
+        int penny;
+        SeaPortSimulator seaPortSimulator;
 
-        SeaPortSimulator seaPortSimulator = new SeaPortSimulator(JSONService.loadSchedule());
-
-        UL_COUNTS = new int[]{1, 1, 1};
-        System.out.printf("Penny when (%d,%d,%d): %d\n", UL_COUNTS[0], UL_COUNTS[1], UL_COUNTS[2],
-                seaPortSimulator.simulate(UL_COUNTS));
-
-//        UL_COUNTS = new int[]{2, 2, 2};
-//        System.out.printf("Penny when (%d,%d,%d): %d\n", UL_COUNTS[0], UL_COUNTS[1], UL_COUNTS[2],
-//                seaPortSimulator.simulate(UL_COUNTS));
-//
-//        UL_COUNTS = new int[]{3, 3, 3};
-//        System.out.printf("Penny when (%d,%d,%d): %d\n", UL_COUNTS[0], UL_COUNTS[1], UL_COUNTS[2],
-//                seaPortSimulator.simulate(UL_COUNTS));
+        UL_COUNTS = new int[]{5, 5, 5};
+        Schedule.main(UL_COUNTS);
+        seaPortSimulator = new SeaPortSimulator(JSONService.loadSchedule());
+        penny = seaPortSimulator.simulate(UL_COUNTS);
+        System.out.printf("Penny when (%d,%d,%d): %d (%,.2f per ship)\n", UL_COUNTS[0], UL_COUNTS[1], UL_COUNTS[2],
+                penny, (double) (penny) / seaPortSimulator.actualSchedule.size());
 
     }
 }

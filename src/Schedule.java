@@ -20,22 +20,23 @@ public class Schedule {
     private final ScheduleEvent[] schedule;
     private List<String> shipNames;
 
-    public Schedule() {
+    public Schedule(int[] nUnloaders) {
         shipNames = readNames();
         List<ScheduleEvent> list = new LinkedList<>();
-        Data[] soonestNewStarts = new Data[CargoType.values().length];
-        for (int i = 0; i < CargoType.values().length; i++) {
-            soonestNewStarts[i] = new Data(0);
-        }
-        int tryesBeforeBreak = 10;
-        while (tryesBeforeBreak > 0) {
-            Ship ship = genRandomShip();
-            ScheduleEvent event = new ScheduleEvent(ship, genRandomData(soonestNewStarts[ship.getCargoType().ordinal()]));
-            if (event.getEndingData().getDay() <= endOfSchedule.getDay()) {
-                list.add(event);
-                soonestNewStarts[ship.getCargoType().ordinal()] = new Data(event.getEndingData().toMinutes() + minEventDelay.toMinutes());
-            } else {
-                tryesBeforeBreak--;
+        for(CargoType cargoType:CargoType.values()) {
+            for(int i=0;i<nUnloaders[cargoType.ordinal()];i++) {
+                Data soonestNewStart = new Data(0);
+                int tryesBeforeBreak = 10;
+                while (tryesBeforeBreak > 0) {
+                    Ship ship = genRandomShip(cargoType);
+                    ScheduleEvent event = new ScheduleEvent(ship, genRandomData(soonestNewStart));
+                    if (event.getEndingData().getDay() <= endOfSchedule.getDay()) {
+                        list.add(event);
+                        soonestNewStart = new Data(event.getEndingData().toMinutes() + minEventDelay.toMinutes());
+                    } else {
+                        tryesBeforeBreak--;
+                    }
+                }
             }
         }
         nEvents = list.size();
@@ -76,7 +77,8 @@ public class Schedule {
     }
 
     private static Data genRandomData(Data minData) {
-        return new Data(Rand.genNormalInt(minData.toMinutes() + meanEventDelay.toMinutes(),
+        return new Data(Rand.genNormalInt(
+                minData.toMinutes() + meanEventDelay.toMinutes(),
                 minData.toMinutes(),
                 Math.min(endOfSchedule.toMinutes(), minData.toMinutes() + maxEventDelay.toMinutes())));
     }
@@ -88,7 +90,7 @@ public class Schedule {
         return names;
     }
 
-    private Ship genRandomShip() {
+    private Ship genRandomShip(CargoType cargoType) {
         final String codeMembers = "1234567890QWERTYUIOPASDFGHJKLZXCVBNM";
         final int chanceOfCode = 5;
         String name;
@@ -104,15 +106,15 @@ public class Schedule {
             name = shipNames.get(index);
             shipNames.remove(index);
         }
-        CargoType cargoType = CargoType.values()[Rand.genInt(CargoType.values().length)];
         int cargoAmount;
         if (cargoType != CargoType.CONTAINERS) cargoAmount = Rand.genInt(100, 7000);
         else cargoAmount = Rand.genInt(10, 300);
         return new Ship(name, cargoType, cargoAmount);
     }
 
-    public static void main(String[] args) {
-        Schedule schedule = new Schedule();
+    public static void main(int[] nUnloaders) {
+        Schedule schedule = new Schedule(nUnloaders);
         JSONService.saveSchedule(schedule);
+//        System.out.println(schedule);
     }
 }

@@ -33,7 +33,7 @@ public class JSONService {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return new Schedule();
+        return new Schedule(new int[]{1, 1, 1});
     }
 
     public static void saveSchedule(Schedule schedule) {
