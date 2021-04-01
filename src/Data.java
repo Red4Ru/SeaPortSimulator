@@ -11,6 +11,10 @@ public class Data {
         this.time = new Time(minutes % (60 * 24));
     }
 
+    public Data(Data data) {
+        this(data.toMinutes());
+    }
+
     @Override
     public String toString() {
         return String.format("Day %d, ", day) + time;
@@ -21,7 +25,7 @@ public class Data {
     }
 
     public Time getTime() {
-        return time;
+        return new Time(time);
     }
 
     public int toMinutes() {

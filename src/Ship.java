@@ -9,8 +9,8 @@ public class Ship {
         this.cargoAmount = cargoAmount;
     }
 
-    public Ship(Ship other){
-        this(other.name,other.cargoType, other.cargoAmount);
+    public Ship(Ship other) {
+        this(other.name, other.cargoType, other.cargoAmount);
     }
 
     @Override
@@ -37,6 +37,7 @@ public class Ship {
     public int getCargoAmount() {
         return cargoAmount;
     }
+
     public void setCargoAmount(int cargoAmount) {
         this.cargoAmount = cargoAmount;
     }

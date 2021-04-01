@@ -16,6 +16,6 @@ public enum CargoType {
     }
 
     public Time getPeriod() {
-        return period;
+        return new Time(period);
     }
 }

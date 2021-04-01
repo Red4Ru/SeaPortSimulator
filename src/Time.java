@@ -11,6 +11,10 @@ public class Time {
         this.minutes = minutes % 60;
     }
 
+    public Time(Time time) {
+        this(time.toMinutes());
+    }
+
     @Override
     public String toString() {
         String hh = Integer.toString(hours);

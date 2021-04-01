@@ -19,7 +19,7 @@ public class JSONService {
             if (i < nEvents) {
                 scheduleEventsNew[i] = schedule.getNthEvent(i);
             } else {
-                scheduleEventsNew[i] = events[i - nEvents];
+                scheduleEventsNew[i] = new ScheduleEvent(events[i - nEvents]);
             }
         }
         schedule = new Schedule(scheduleEventsNew);

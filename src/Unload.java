@@ -2,20 +2,27 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Unload {
-    private final ScheduleEvent actualEvent;
+    private final ScheduleEvent originalEvent;
     private final Data startingData;
     private Data currentData;
-    private final Ship ship;
+    private Ship ship;
     private Time extraTime;
-    private final List<Data> endsOfExecutes;
+    private List<Data> endsOfExecutes;
 
     public Unload(ScheduleEvent originalEvent, Data startingData, Time extraTime) {
-        this.actualEvent = new ScheduleEvent(originalEvent.getInvolvedShip(), startingData);
-        this.startingData = startingData;
-        this.currentData = startingData;
-        this.ship = new Ship(actualEvent.getInvolvedShip());
-        this.extraTime = extraTime;
+        this.originalEvent = new ScheduleEvent(originalEvent);
+        this.startingData = new Data(startingData);
+        this.currentData = new Data(startingData);
+        this.ship = new Ship(originalEvent.getInvolvedShip());
+        this.extraTime = new Time(extraTime);
         this.endsOfExecutes = new ArrayList<>();
+    }
+
+    public Unload(Unload unload) {
+        this(unload.originalEvent, unload.startingData, unload.extraTime);
+        this.currentData = new Data(unload.currentData);
+        this.ship = new Ship(unload.ship);
+        this.endsOfExecutes = new ArrayList<>(unload.endsOfExecutes);
     }
 
     @Override
@@ -42,15 +49,15 @@ public class Unload {
     }
 
     public ScheduleEvent getOriginalEvent() {
-        return actualEvent;
+        return new ScheduleEvent(originalEvent);
     }
 
     public Data getStartingData() {
-        return startingData;
+        return new Data(startingData);
     }
 
     public Data getCurrentData() {
-        return currentData;
+        return new Data(currentData);
     }
 
     public Time getRemainingTime() {
@@ -62,7 +69,7 @@ public class Unload {
     }
 
     public Time getExcess() {
-        return new Time(Math.max(0, getEndingData().toMinutes() - actualEvent.getEndingData().toMinutes()));
+        return new Time(Math.max(0, getEndingData().toMinutes() - originalEvent.getEndingData().toMinutes()));
     }
 
     public CargoType getCargoType() {

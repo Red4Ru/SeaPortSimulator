@@ -3,8 +3,12 @@ public class ScheduleEvent {
     private final Data startingData;
 
     public ScheduleEvent(Ship ship, Data startingData) {
-        this.ship = ship;
-        this.startingData = startingData;
+        this.ship = new Ship(ship);
+        this.startingData = new Data(startingData);
+    }
+
+    public ScheduleEvent(ScheduleEvent event) {
+        this(event.ship, event.startingData);
     }
 
     @Override
@@ -16,15 +20,15 @@ public class ScheduleEvent {
     }
 
     public Ship getInvolvedShip() {
-        return ship;
+        return new Ship(ship);
     }
 
     public Data getStartingData() {
-        return startingData;
+        return new Data(startingData);
     }
 
     public Time getUnloadingTime() {
-        return ship.getUnloadingTime();
+        return new Time(ship.getUnloadingTime());
     }
 
     public Data getEndingData() {

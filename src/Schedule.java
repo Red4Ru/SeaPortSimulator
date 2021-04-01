@@ -45,6 +45,7 @@ public class Schedule {
     }
 
     public Schedule(ScheduleEvent[] events) {
+        shipNames = readNames();
         nEvents = events.length;
         schedule = new ScheduleEvent[nEvents];
         for (int i = 0; i < nEvents; i++) {
@@ -52,7 +53,7 @@ public class Schedule {
                     events[i].getStartingData().getDay() < 1) {
                 System.err.printf("Wrong day: %d%n", i);
             }
-            schedule[i] = events[i];
+            schedule[i] = new ScheduleEvent(events[i]);
         }
         Arrays.sort(schedule, new SortByStartingTime());
     }
@@ -73,7 +74,7 @@ public class Schedule {
     }
 
     public ScheduleEvent getNthEvent(int n) {
-        return schedule[n];
+        return new ScheduleEvent(schedule[n]);
     }
 
     private static Data genRandomData(Data minData) {
