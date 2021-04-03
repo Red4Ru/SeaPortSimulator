@@ -1,7 +1,7 @@
 public enum CargoType {
-    LOOSE(new Time(0,2), 150), // amount in tons of loose cargo per unload
-    LIQUID(new Time(0,1), 15), // amount in tons of liquid cargo per unload
-    CONTAINERS(new Time(0,6), 1); // amount in containers per unload
+    LOOSE(new Time(/*period*/2), /*amount in tons of loose cargo per time*/150),
+    LIQUID(new Time(/*period*/1), /*amount in tons of liquid cargo per time*/15),
+    CONTAINERS(new Time(/*period*/6), /*amount in containers per unload*/1);
 
     private final Time period;
     private final int amount;

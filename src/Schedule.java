@@ -21,41 +21,42 @@ public class Schedule {
     private final List<String> shipNames;
 
     public Schedule(int[] nUnloaders) {
-        shipNames = readNames();
+        final int tryesBeforeBreak = 10;
+        this.shipNames = readNames();
         List<ScheduleEvent> list = new LinkedList<>();
         for (CargoType cargoType : CargoType.values()) {
             for (int i = 0; i < nUnloaders[cargoType.ordinal()]; i++) {
                 Data soonestNewStart = new Data(0);
-                int tryesBeforeBreak = 10;
-                while (tryesBeforeBreak > 0) {
+                int currentTryesLast = tryesBeforeBreak;
+                while (currentTryesLast > 0) {
                     Ship ship = genRandomShip(cargoType);
                     ScheduleEvent event = new ScheduleEvent(ship, genRandomData(soonestNewStart));
                     if (event.getEndingData().getDay() <= endOfSchedule.getDay()) {
                         list.add(event);
                         soonestNewStart = new Data(event.getEndingData().toMinutes() + minEventDelay.toMinutes());
                     } else {
-                        tryesBeforeBreak--;
+                        currentTryesLast--;
                     }
                 }
             }
         }
-        nEvents = list.size();
-        schedule = list.toArray(new ScheduleEvent[nEvents]);
-        Arrays.sort(schedule, new SortByStartingTime());
+        this.nEvents = list.size();
+        this.schedule = list.toArray(new ScheduleEvent[this.nEvents]);
+        Arrays.sort(this.schedule, new SortByStartingTime());
     }
 
     public Schedule(ScheduleEvent[] events) {
-        shipNames = readNames();
-        nEvents = events.length;
-        schedule = new ScheduleEvent[nEvents];
-        for (int i = 0; i < nEvents; i++) {
+        this.shipNames = readNames();
+        this.nEvents = events.length;
+        this.schedule = new ScheduleEvent[this.nEvents];
+        for (int i = 0; i < this.nEvents; i++) {
             if (events[i].getStartingData().getDay() > endOfSchedule.getDay() ||
-                    events[i].getStartingData().getDay() < 1) {
+                    events[i].getStartingData().getDay() < Data.FIRST_DAY) {
                 System.err.printf("Wrong day: %d%n", i);
             }
-            schedule[i] = new ScheduleEvent(events[i]);
+            this.schedule[i] = new ScheduleEvent(events[i]);
         }
-        Arrays.sort(schedule, new SortByStartingTime());
+        Arrays.sort(this.schedule, new SortByStartingTime());
     }
 
     @Override
@@ -87,20 +88,32 @@ public class Schedule {
     private static List<String> readNames() {
         //from https://en.wikipedia.org/wiki/List_of_fictional_ships, length - 127
         List<String> names = new LinkedList<>();
-        Collections.addAll(names, JSONService.loadShipNames());
+        String[] namesLoaded = JSONService.loadShipNames();
+        if (namesLoaded == null) {
+            System.err.println("Can't load, nothing to use as names");
+        } else {
+            Collections.addAll(names, namesLoaded);
+        }
         return names;
     }
 
     private Ship genRandomShip(CargoType cargoType) {
-        final String codeMembers = "1234567890QWERTYUIOPASDFGHJKLZXCVBNM";
-        final int chanceOfCode = 5;
+        final String digits = "1234567890";
+        final String letters = "QWERTYUIOPASDFGHJKLZXCVBNM";
+        final int chanceOfCode = 5;//in percents
+        final int lettersInCode = 2, digitsInCode = 4;
+
+        final int minLooseTons = 5000, maxLooseTons = 10000;
+        final int minLiquidTons = 1000, maxLiquidTons = 10000;
+        final int minContainerAmount = 33, maxContainerAmount = 333;
+
         String name;
         if ((shipNames.size() == 0) || (Rand.genInt(100) < chanceOfCode)) {
             StringBuilder string = new StringBuilder();
-            for (int i = 0; i < 2; i++)
-                string.append(codeMembers.charAt(Rand.genInt(10, codeMembers.length() - 1)));
+            for (int i = 0; i < lettersInCode; i++)
+                string.append(letters.charAt(Rand.genInt(letters.length())));
             string.append('-');
-            for (int i = 0; i < 4; i++) string.append(codeMembers.charAt(Rand.genInt(10)));
+            for (int i = 0; i < digitsInCode; i++) string.append(digits.charAt(Rand.genInt(digits.length())));
             name = string.toString();
         } else {
             int index = Rand.genInt(shipNames.size());
@@ -108,9 +121,10 @@ public class Schedule {
             shipNames.remove(index);
         }
         int cargoAmount;
-        if (cargoType == CargoType.LOOSE) cargoAmount = Rand.genInt(5000, 10000);
-        else if (cargoType == CargoType.LIQUID) cargoAmount = Rand.genInt(1000, 10000);
-        else cargoAmount = Rand.genInt(33, 333);
+        if (cargoType == CargoType.LOOSE) cargoAmount = Rand.genInt(minLooseTons, maxLooseTons);
+        else if (cargoType == CargoType.LIQUID) cargoAmount = Rand.genInt(minLiquidTons, maxLiquidTons);
+        else if (cargoType == CargoType.CONTAINERS) cargoAmount = Rand.genInt(minContainerAmount, maxContainerAmount);
+        else cargoAmount = 0;//error
         return new Ship(name, cargoType, cargoAmount);
     }
 

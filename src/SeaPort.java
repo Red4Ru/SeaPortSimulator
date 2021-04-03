@@ -11,7 +11,7 @@ class SortByEndingTime implements Comparator<Unload> {
 }
 
 public class SeaPort {
-    public static final int MAX_SAME_TIME = 2;
+    public static final int MAX_SAME_TIME = 2, DEFAULT_CURRENT_DATA = -1;
     private final PriorityQueue<Unload>[] availableUnloads = new PriorityQueue[CargoType.values().length];
     private final PriorityQueue<Unload> carriedUnloads = new PriorityQueue<>(new SortByEndingTime());
     private final Object[] mutexes = new Object[CargoType.values().length];
@@ -23,8 +23,8 @@ public class SeaPort {
     private Time totalDelay;
 
     public SeaPort() {
-        currentData = new Data(-1);
-        totalDelay = new Time(0);
+        this.currentData = new Data(DEFAULT_CURRENT_DATA);
+        this.totalDelay = new Time(0);
     }
 
     public void incrementnUnloadersTotal() {
@@ -59,7 +59,8 @@ public class SeaPort {
                     endOfTask = unload.execute();
                     if (unload.getRemainingTime().toMinutes() == 0) {
                         synchronized (totalDelayMutex) {
-                            totalDelay = new Time((unload.getExcess().getHours() + totalDelay.getHours()) * 60);
+                            totalDelay = new Time((unload.getExcess().getHours() + totalDelay.getHours())
+                                    * Time.MM_IN_HH);
                             carriedUnloads.add(unload);
                         }
                     } else {
@@ -118,7 +119,7 @@ public class SeaPort {
             e.printStackTrace();
         }
         running.set(true);
-        currentData = new Data(-1);
+        currentData = new Data(DEFAULT_CURRENT_DATA);
         synchronized (totalDelayMutex) {
             totalDelay = new Time(0);
         }

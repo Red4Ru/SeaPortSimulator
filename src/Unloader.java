@@ -2,7 +2,7 @@ public class Unloader implements Runnable {
     private final SeaPort port;
     private final CargoType cargoType;
     private Data endOfTask;
-    private int lastCheckedMinutes = -1;
+    private int lastCheckedMinutes = SeaPort.DEFAULT_CURRENT_DATA;
 
     public Unloader(SeaPort port, CargoType cargoType) {
         this.port = port;

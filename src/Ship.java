@@ -43,7 +43,7 @@ public class Ship {
     }
 
     public Time getUnloadingTime() {
-        return new Time((getCargoAmount() + getCargoType().getAmount() - 1) /
+        return new Time((getCargoAmount() + getCargoType().getAmount() - 1) / //divide with ceiling
                 getCargoType().getAmount() * getCargoType().getPeriod().toMinutes());
     }
 }

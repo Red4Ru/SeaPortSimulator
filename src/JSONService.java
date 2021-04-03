@@ -12,6 +12,10 @@ public class JSONService {
 
     public static void addScheduleEvents(ScheduleEvent[] events) {
         Schedule schedule = loadSchedule();
+        if (schedule == null) {
+            System.err.println("Can't download, nothing added");
+            return;
+        }
         int nEvents = schedule.getEventsNumber();
         int nEventsNew = nEvents + events.length;
         ScheduleEvent[] scheduleEventsNew = new ScheduleEvent[nEventsNew];
@@ -33,7 +37,7 @@ public class JSONService {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return new Schedule(new int[]{1, 1, 1});
+        return null;
     }
 
     public static void saveSchedule(Schedule schedule) {
@@ -53,6 +57,6 @@ public class JSONService {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return new String[]{};
+        return null;
     }
 }

@@ -42,7 +42,7 @@ public class Unload {
 
     public void setCurrentData(Data currentData) {
         if (endsOfExecutes.size() > 0) {
-            executeTimeTotal = new Time(executeTimeTotal.toMinutes() +
+            this.executeTimeTotal = new Time(this.executeTimeTotal.toMinutes() +
                     currentData.toMinutes() - this.currentData.toMinutes());
             for (int i = endsOfExecutes.size() - 1; i >= 0; i--) {
                 if (endsOfExecutes.get(i).toMinutes() == currentData.toMinutes()) {

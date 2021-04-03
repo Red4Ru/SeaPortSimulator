@@ -2,7 +2,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class SeaPortSimulator {
-    private static final Time absArrivalDeviation = new Time(24 * 7, 10);
+    private static final Time absArrivalDeviation = new Time(Data.HH_IN_DAY * 7, 0);
     private static final Time unloadingDeviation = new Time(0, 1440);
     private List<Unload> actualSchedule;
     private Data endOfSimulation;
@@ -14,15 +14,15 @@ public class SeaPortSimulator {
     public void setSchedule(Schedule schedule) {
         Data maxData = new Data(0);
         int nEvents = schedule.getEventsNumber();
-        actualSchedule = new ArrayList<>();
+        this.actualSchedule = new ArrayList<>();
         for (int i = 0; i < nEvents; i++) {
             Unload unload = toActualEvent(schedule.getNthEvent(i));
             if (unload != null) {
-                actualSchedule.add(unload);
+                this.actualSchedule.add(unload);
                 maxData = new Data(Math.max(unload.getEndingData().toMinutes(), maxData.toMinutes()));
             }
         }
-        endOfSimulation = maxData;
+        this.endOfSimulation = maxData;
     }
 
     private Unload toActualEvent(ScheduleEvent event) {
@@ -41,16 +41,17 @@ public class SeaPortSimulator {
         int nUnloadersTotal = 0;
         int totalPenalty = 0;
         int totalUnloadQueueLength = 0;
-        final int PENNY_PER_UNLOADER = 30000;
-        final int PENNY_PER_HOUR = 100;
+        final int penaltyPerUnloader = 30000;
+        final int penaltyPerHour = 100;
         final int n = CargoType.values().length;
-        final long RESET_DELAY = 10;
+        final long resetDelay = 10;
+
         List<Unload> remainUnloads = new ArrayList<>();
         for (Unload unload : actualSchedule) {
             remainUnloads.add(new Unload(unload));
         }
         SeaPort port = new SeaPort();
-        port.reset(RESET_DELAY);
+        port.reset(resetDelay);
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < nUnloaders[i]; j++) {
                 Thread thread = new Thread(new Unloader(port, CargoType.values()[i]));
@@ -58,7 +59,7 @@ public class SeaPortSimulator {
             }
             nUnloadersTotal += nUnloaders[i];
         }
-        totalPenalty += nUnloadersTotal * PENNY_PER_UNLOADER;
+        totalPenalty += nUnloadersTotal * penaltyPerUnloader;
         Data data = new Data(0);
         while ((data.toMinutes() < endOfSimulation.toMinutes()) || (port.getAvailableUnloadsLen() > 0)) {
             List<Unload> added = new ArrayList<>();
@@ -75,7 +76,7 @@ public class SeaPortSimulator {
             totalUnloadQueueLength += port.getAvailableUnloadsLen();
             data = new Data(data.toMinutes() + 1);
         }
-        totalPenalty += port.getPenalty(PENNY_PER_HOUR);
+        totalPenalty += port.getPenalty(penaltyPerHour);
         if (needReport) {
             Unload[] carriedUnloads = port.getCarriedUnloads();
             int i = 0;
@@ -101,36 +102,39 @@ public class SeaPortSimulator {
             System.out.printf("\nMax excess time: %s", new Time(maxExcess));
             System.out.println();
         }
-        port.reset(RESET_DELAY);
+        port.reset(resetDelay);
         return totalPenalty;
     }
 
     public int[] findOptimalUnloaderCounts() {
-        int N_ITERS = 2;
-        int min_count = 1;
+        final int nIterations = 2;
+        final int min_count = 1;
+        final int defaultBestCount = -1;
+        final double defaultBestPenalty = -1;
+
         int[] nUnloaders = new int[CargoType.values().length];
         for (CargoType cargoType : CargoType.values()) {
             nUnloaders[cargoType.ordinal()] = 0;
         }
         for (CargoType cargoType : CargoType.values()) {
-            int bestCount = -1;
-            double bestPenalty = -1;
+            int bestCount = defaultBestCount;
+            double bestPenalty = defaultBestPenalty;
             for (int i = min_count; ; i++) {
                 nUnloaders[cargoType.ordinal()] = i;
                 double meanPenalty = 0;
-                for (int j = 0; j < N_ITERS; j++) {
+                for (int j = 0; j < nIterations; j++) {
                     meanPenalty += (double) simulate(nUnloaders, false) / actualSchedule.size();
                 }
-                meanPenalty /= N_ITERS;
+                meanPenalty /= nIterations;
                 System.out.printf("Type: %s, Count: %d, Penalty: %,.2f\n", cargoType, i, meanPenalty);
-                if (bestPenalty < meanPenalty && bestPenalty != -1) {
+                if ((bestPenalty < meanPenalty) && (bestPenalty != defaultBestPenalty)) {
                     break;
                 }
                 bestCount = i;
                 bestPenalty = meanPenalty;
             }
             nUnloaders[cargoType.ordinal()] = bestCount;
-            System.out.printf("Type: %s, Best Count: %d, Best Penalty: %,.2f\n", cargoType, bestCount, bestPenalty);
+            System.out.printf("Type: %s, Best Count: %d, Best Penalty: %,.2f\n\n", cargoType, bestCount, bestPenalty);
         }
         return nUnloaders;
     }
@@ -141,7 +145,12 @@ public class SeaPortSimulator {
         SeaPortSimulator seaPortSimulator;
 
         Schedule.main(ASSUMED_UL_COUNTS);
-        seaPortSimulator = new SeaPortSimulator(JSONService.loadSchedule());
+        Schedule schedule = JSONService.loadSchedule();
+        if (schedule == null) {
+            System.err.println("Can't load, nothing to simulate");
+            return;
+        }
+        seaPortSimulator = new SeaPortSimulator(schedule);
         System.out.println("Starting simulation...");
         int[] nUnloaders = seaPortSimulator.findOptimalUnloaderCounts();
         penalty = seaPortSimulator.simulate(nUnloaders, true);

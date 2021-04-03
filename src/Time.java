@@ -1,14 +1,15 @@
 public class Time {
+    public static final int MM_IN_HH = 60;
     private final int hours;
     private final int minutes;
 
     public Time(int hours, int minutes) {
-        this(hours * 60 + minutes);
+        this(hours * MM_IN_HH + minutes);
     }
 
     public Time(int minutes) {
-        this.hours = minutes / 60;
-        this.minutes = minutes % 60;
+        this.hours = minutes / MM_IN_HH;
+        this.minutes = minutes % MM_IN_HH;
     }
 
     public Time(Time time) {
@@ -33,6 +34,6 @@ public class Time {
     }
 
     public int toMinutes() {
-        return hours * 60 + minutes;
+        return hours * MM_IN_HH + minutes;
     }
 }

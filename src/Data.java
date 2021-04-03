@@ -1,14 +1,15 @@
 public class Data {
+    public static final int MM_IN_HH = Time.MM_IN_HH, HH_IN_DAY = 24, FIRST_DAY = 1;
     private final int day;
     private final Time time;
 
     public Data(int day, Time time) {
-        this((day - 1) * 24 * 60 + time.toMinutes());
+        this((day - FIRST_DAY) * HH_IN_DAY * MM_IN_HH + time.toMinutes());
     }
 
     public Data(int minutes) {
-        this.day = minutes / 60 / 24 + 1;
-        this.time = new Time(minutes % (60 * 24));
+        this.day = minutes / MM_IN_HH / HH_IN_DAY + FIRST_DAY;
+        this.time = new Time(minutes % (MM_IN_HH * HH_IN_DAY));
     }
 
     public Data(Data data) {
@@ -29,6 +30,6 @@ public class Data {
     }
 
     public int toMinutes() {
-        return (day - 1) * 24 * 60 + time.toMinutes();
+        return (day - FIRST_DAY) * HH_IN_DAY * MM_IN_HH + time.toMinutes();
     }
 }
