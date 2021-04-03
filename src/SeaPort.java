@@ -22,16 +22,16 @@ public class SeaPort {
     private Data currentData;
     private Time totalDelay;
 
-    public SeaPort(){
+    public SeaPort() {
         currentData = new Data(-1);
         totalDelay = new Time(0);
     }
 
-    public void incrementnUnloadersTotal(){
+    public void incrementnUnloadersTotal() {
         nUnloadersTotal.incrementAndGet();
     }
 
-    public void decrementnUnloadersTotal(){
+    public void decrementnUnloadersTotal() {
         nUnloadersTotal.decrementAndGet();
     }
 
@@ -43,7 +43,7 @@ public class SeaPort {
         return running.get();
     }
 
-    public boolean isCurrentData(int dataInMinutes){
+    public boolean isCurrentData(int dataInMinutes) {
         return dataInMinutes == currentData.toMinutes();
     }
 
@@ -78,13 +78,14 @@ public class SeaPort {
         availableUnloads[unload.getCargoType().ordinal()].add(new Unload(unload));
     }
 
-    public synchronized void printCarriedUnloads() {
+    public synchronized Unload[] getCarriedUnloads() {
+        Unload[] result = new Unload[carriedUnloads.size()];
         int i = 0;
         for (Unload unload : carriedUnloads) {
+            result[i] = new Unload(unload);
             i++;
-            System.out.printf("%d) %s\n\n", i, unload);
         }
-        System.out.println();
+        return result;
     }
 
     public void setCurrentData(Data currentData) {
@@ -129,7 +130,7 @@ public class SeaPort {
         nWaiting.set(0);
     }
 
-    public int getAvailableUnloadsLen() {
+    public synchronized int getAvailableUnloadsLen() {
         int sum = 0;
         for (CargoType cargoType : CargoType.values()) {
             sum += availableUnloads[cargoType.ordinal()].size();

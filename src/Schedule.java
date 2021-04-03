@@ -18,13 +18,13 @@ public class Schedule {
     private static final Time maxEventDelay = new Time(60);
     private final int nEvents;
     private final ScheduleEvent[] schedule;
-    private List<String> shipNames;
+    private final List<String> shipNames;
 
     public Schedule(int[] nUnloaders) {
         shipNames = readNames();
         List<ScheduleEvent> list = new LinkedList<>();
-        for(CargoType cargoType:CargoType.values()) {
-            for(int i=0;i<nUnloaders[cargoType.ordinal()];i++) {
+        for (CargoType cargoType : CargoType.values()) {
+            for (int i = 0; i < nUnloaders[cargoType.ordinal()]; i++) {
                 Data soonestNewStart = new Data(0);
                 int tryesBeforeBreak = 10;
                 while (tryesBeforeBreak > 0) {
@@ -108,8 +108,9 @@ public class Schedule {
             shipNames.remove(index);
         }
         int cargoAmount;
-        if (cargoType != CargoType.CONTAINERS) cargoAmount = Rand.genInt(100, 7000);
-        else cargoAmount = Rand.genInt(10, 300);
+        if (cargoType == CargoType.LOOSE) cargoAmount = Rand.genInt(5000, 10000);
+        else if (cargoType == CargoType.LIQUID) cargoAmount = Rand.genInt(1000, 10000);
+        else cargoAmount = Rand.genInt(33, 333);
         return new Ship(name, cargoType, cargoAmount);
     }
 

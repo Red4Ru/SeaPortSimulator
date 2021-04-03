@@ -7,6 +7,7 @@ public class Unload {
     private Data currentData;
     private Ship ship;
     private Time extraTime;
+    private Time executeTimeTotal;
     private List<Data> endsOfExecutes;
 
     public Unload(ScheduleEvent originalEvent, Data startingData, Time extraTime) {
@@ -16,6 +17,7 @@ public class Unload {
         this.ship = new Ship(originalEvent.getInvolvedShip());
         this.extraTime = new Time(extraTime);
         this.endsOfExecutes = new ArrayList<>();
+        this.executeTimeTotal = new Time(0);
     }
 
     public Unload(Unload unload) {
@@ -23,33 +25,32 @@ public class Unload {
         this.currentData = new Data(unload.currentData);
         this.ship = new Ship(unload.ship);
         this.endsOfExecutes = new ArrayList<>(unload.endsOfExecutes);
+        this.executeTimeTotal = new Time(unload.executeTimeTotal);
     }
 
     @Override
     public String toString() {
-        return "Unload{\n" +
-                "getOriginalEvent():\n" + getOriginalEvent() +
-                ",\ngetStartingData(): " + getStartingData() +
-                ",\ngetCurrentData(): " + getCurrentData() +
-                ",\ngetRemainingTime(): " + getRemainingTime() +
-                ",\ngetEndingData(): " + getEndingData() +
-                ",\ngetExcess(): " + getExcess() +
-                ",\ngetCargoType(): " + getCargoType() +
-                ",\ngetSimultaneousExecutesCount(): " + getSimultaneousExecutesCount() +
+        return "Unload " +
+                "{\nShip name: " + ship.getName() +
+                ",\nArriving in the port: " + getStartingData() +
+                ",\nTotal waiting time: " + getWaitingTime() +
+                ",\nUnloading time: " + getSpentTime() +
+                ",\nDeparture from the port: " + getEndingData() +
+                ",\nExcess time: " + getExcess() +
                 '}';
     }
 
     public void setCurrentData(Data currentData) {
-        this.currentData = currentData;
-        for (int i = endsOfExecutes.size() - 1; i >= 0; i--) {
-            if (endsOfExecutes.get(i).toMinutes() == currentData.toMinutes()) {
-                endsOfExecutes.remove(i);
+        if (endsOfExecutes.size() > 0) {
+            executeTimeTotal = new Time(executeTimeTotal.toMinutes() +
+                    currentData.toMinutes() - this.currentData.toMinutes());
+            for (int i = endsOfExecutes.size() - 1; i >= 0; i--) {
+                if (endsOfExecutes.get(i).toMinutes() == currentData.toMinutes()) {
+                    endsOfExecutes.remove(i);
+                }
             }
         }
-    }
-
-    public ScheduleEvent getOriginalEvent() {
-        return new ScheduleEvent(originalEvent);
+        this.currentData = new Data(currentData);
     }
 
     public Data getStartingData() {
@@ -70,6 +71,14 @@ public class Unload {
 
     public Time getExcess() {
         return new Time(Math.max(0, getEndingData().toMinutes() - originalEvent.getEndingData().toMinutes()));
+    }
+
+    public Time getSpentTime() {
+        return new Time(getCurrentData().toMinutes() - getStartingData().toMinutes());
+    }
+
+    public Time getWaitingTime() {
+        return new Time(getSpentTime().toMinutes() - executeTimeTotal.toMinutes());
     }
 
     public CargoType getCargoType() {

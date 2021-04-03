@@ -28,8 +28,7 @@ public class SeaPortSimulator {
     private Unload toActualEvent(ScheduleEvent event) {
         Data start = event.getStartingData();
         Data start_min = new Data(start.toMinutes() - absArrivalDeviation.toMinutes());
-        Data start_max = new Data(Math.min(Schedule.endOfSchedule.toMinutes(),
-                start.toMinutes() + absArrivalDeviation.toMinutes()));
+        Data start_max = new Data(start.toMinutes() + absArrivalDeviation.toMinutes());
         Data actualStart = new Data(Rand.genNormalInt(event.getStartingData().toMinutes(),
                 start_min.toMinutes(), start_max.toMinutes()));
         if (actualStart.toMinutes() < 0) return null;
@@ -41,6 +40,7 @@ public class SeaPortSimulator {
     public int simulate(int[] nUnloaders, boolean needReport) {
         int nUnloadersTotal = 0;
         int totalPenalty = 0;
+        int totalUnloadQueueLength = 0;
         final int PENNY_PER_UNLOADER = 30000;
         final int PENNY_PER_HOUR = 100;
         final int n = CargoType.values().length;
@@ -72,18 +72,42 @@ public class SeaPortSimulator {
             }
             remainUnloads.removeAll(added);
             port.setCurrentData(data);
+            totalUnloadQueueLength += port.getAvailableUnloadsLen();
             data = new Data(data.toMinutes() + 1);
         }
         totalPenalty += port.getPenalty(PENNY_PER_HOUR);
         if (needReport) {
-            port.printCarriedUnloads();
+            Unload[] carriedUnloads = port.getCarriedUnloads();
+            int i = 0;
+            int totalWaiting = 0;
+            int minExcess = -1;
+            int maxExcess = 0;
+            for (Unload unload : carriedUnloads) {
+                i++;
+                System.out.printf("%d) %s\n\n", i, unload);
+                totalWaiting += unload.getWaitingTime().toMinutes();
+                int excess = unload.getExcess().toMinutes();
+                if ((minExcess == -1) || (minExcess > excess)) {
+                    minExcess = excess;
+                }
+                if (maxExcess < excess) {
+                    maxExcess = excess;
+                }
+            }
+            System.out.printf("\nTotal ships: %d", actualSchedule.size());
+            System.out.printf("\nMean unload queue length: %d", totalUnloadQueueLength / data.toMinutes());
+            System.out.printf("\nMean unload waiting time: %s", new Time(totalWaiting / carriedUnloads.length));
+            System.out.printf("\nMin excess time: %s", new Time(minExcess));
+            System.out.printf("\nMax excess time: %s", new Time(maxExcess));
+            System.out.println();
         }
         port.reset(RESET_DELAY);
         return totalPenalty;
     }
 
-    public int[] findOptimalUnloaderCounts(int min_count) {
+    public int[] findOptimalUnloaderCounts() {
         int N_ITERS = 2;
+        int min_count = 1;
         int[] nUnloaders = new int[CargoType.values().length];
         for (CargoType cargoType : CargoType.values()) {
             nUnloaders[cargoType.ordinal()] = 0;
@@ -113,17 +137,17 @@ public class SeaPortSimulator {
 
     public static void main(String[] args) {
         final int[] ASSUMED_UL_COUNTS = new int[]{1, 1, 1};
-        int penny;
+        int penalty;
         SeaPortSimulator seaPortSimulator;
 
         Schedule.main(ASSUMED_UL_COUNTS);
         seaPortSimulator = new SeaPortSimulator(JSONService.loadSchedule());
-        System.out.printf("Total ships: %d\n", seaPortSimulator.actualSchedule.size());
-        int[] nUnloaders = seaPortSimulator.findOptimalUnloaderCounts(1);
-        System.out.printf("Minimal penny when (%d,%d,%d)\n",
+        System.out.println("Starting simulation...");
+        int[] nUnloaders = seaPortSimulator.findOptimalUnloaderCounts();
+        penalty = seaPortSimulator.simulate(nUnloaders, true);
+        System.out.printf("Minimal penalty when (%d,%d,%d)\n",
                 nUnloaders[0], nUnloaders[1], nUnloaders[2]);
-        penny = seaPortSimulator.simulate(nUnloaders, true);
         System.out.printf("Minimal penalty: %d (%,.2f per ship)\n",
-                penny, (double) penny / seaPortSimulator.actualSchedule.size());
+                penalty, (double) penalty / seaPortSimulator.actualSchedule.size());
     }
 }
