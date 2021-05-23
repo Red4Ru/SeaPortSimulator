@@ -37,7 +37,7 @@ public class Unload {
                 ",\nUnloading time: " + getSpentTime() +
                 ",\nDeparture from the port: " + getEndingData() +
                 ",\nExcess time: " + getExcess() +
-                '}';
+                "\n}";
     }
 
     public void setCurrentData(Data currentData) {

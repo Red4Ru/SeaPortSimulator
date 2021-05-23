@@ -145,7 +145,7 @@ public class SeaPortSimulator {
         SeaPortSimulator seaPortSimulator;
 
         Schedule.main(ASSUMED_UL_COUNTS);
-        Schedule schedule = JSONService.loadSchedule();
+        Schedule schedule = JSONService.loadSchedule(ASSUMED_UL_COUNTS);
         if (schedule == null) {
             System.err.println("Can't load, nothing to simulate");
             return;
@@ -154,6 +154,7 @@ public class SeaPortSimulator {
         System.out.println("Starting simulation...");
         int[] nUnloaders = seaPortSimulator.findOptimalUnloaderCounts();
         penalty = seaPortSimulator.simulate(nUnloaders, true);
+        System.out.println();
         System.out.printf("Minimal penalty when (%d,%d,%d)\n",
                 nUnloaders[0], nUnloaders[1], nUnloaders[2]);
         System.out.printf("Minimal penalty: %d (%,.2f per ship)\n",

@@ -130,7 +130,6 @@ public class Schedule {
 
     public static void main(int[] nUnloaders) {
         Schedule schedule = new Schedule(nUnloaders);
-        JSONService.saveSchedule(schedule);
-//        System.out.println(schedule);
+        JSONService.saveSchedule(schedule, nUnloaders);
     }
 }
